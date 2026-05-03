@@ -28,13 +28,24 @@ Raw CSV Files (9 tables)
         SQL Analytics Queries
 ```
 
+## Pipeline Evolution
+
+| Version | File | Processing | Storage | Why |
+|---------|------|------------|---------|-----|
+| v1 | `etl.py` | pandas | PostgreSQL | Baseline implementation; straightforward and readable |
+| v2 | `spark_etl.py` | PySpark | Parquet | Scalable to large datasets; industry-standard big data stack |
+
+Both versions produce the same star schema. v2 demonstrates how the pipeline would look in a real production environment where data volume exceeds single-machine memory.
+
 ## Tech Stack
 
 | Layer | Tool |
 |-------|------|
 | Language | Python 3.13 |
-| Data Processing | pandas |
+| Data Processing (v1) | pandas |
+| Data Processing (v2) | PySpark 4.x |
 | Database | PostgreSQL 16 |
+| Big Data Storage | Parquet |
 | ORM / Connector | SQLAlchemy + psycopg2 |
 | Data Source | [Olist Brazilian E-Commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) |
 
@@ -84,7 +95,7 @@ createdb olist_dw
 ### Download dataset
 Download from [Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) and place all CSV files in the project root.
 
-### Run ETL
+### Run v1 ETL (pandas → PostgreSQL)
 ```bash
 python3 etl.py
 ```
@@ -103,6 +114,14 @@ Expected output:
 
 Done! Star schema loaded into olist_dw.
 ```
+
+### Run v2 ETL (PySpark → Parquet)
+```bash
+pip install pyspark
+python3 spark_etl.py
+```
+
+Output is saved to `output/parquet/` as columnar Parquet files, with Spark SQL analytics printed to console.
 
 ### Run analytics queries
 ```bash
@@ -130,8 +149,15 @@ psql olist_dw -f queries.sql | cat
 
 ```
 ecommerce-pipeline/
-├── etl.py                              # ETL pipeline (Extract → Transform → Load)
+├── etl.py                              # v1: pandas ETL → PostgreSQL
+├── spark_etl.py                        # v2: PySpark ETL → Parquet
 ├── queries.sql                         # Business analytics SQL queries
+├── output/parquet/                     # Parquet output from spark_etl.py
+│   ├── dim_customers/
+│   ├── dim_products/
+│   ├── dim_sellers/
+│   ├── dim_date/
+│   └── fact_order_items/
 ├── olist_customers_dataset.csv
 ├── olist_orders_dataset.csv
 ├── olist_order_items_dataset.csv
@@ -172,13 +198,24 @@ ecommerce-pipeline/
       客户维度表     产品维度表     卖家维度表   日期维度表
 ```
 
+## 版本演进
+
+| 版本 | 文件 | 处理引擎 | 存储格式 | 说明 |
+|------|------|----------|----------|------|
+| v1 | `etl.py` | pandas | PostgreSQL | 基础实现，代码简洁易读 |
+| v2 | `spark_etl.py` | PySpark | Parquet | 可扩展至大数据规模，贴近真实生产环境 |
+
+两个版本产出相同的星型模型结构。v2 展示了当数据量超出单机内存时，pipeline 在真实生产环境中的形态。
+
 ## 技术栈
 
 | 层级 | 工具 |
 |------|------|
 | 编程语言 | Python 3.13 |
-| 数据处理 | pandas |
+| 数据处理（v1） | pandas |
+| 数据处理（v2） | PySpark 4.x |
 | 数据库 | PostgreSQL 16 |
+| 大数据存储格式 | Parquet |
 | 数据库连接 | SQLAlchemy + psycopg2 |
 | 数据来源 | Olist 巴西电商公开数据集（Kaggle） |
 
@@ -204,15 +241,18 @@ Olist 数据集包含 2016–2018 年约 10 万条真实订单，共 9 张关联
 # 1. 创建虚拟环境并安装依赖
 python3 -m venv venv
 source venv/bin/activate
-pip install pandas sqlalchemy psycopg2-binary
+pip install pandas sqlalchemy psycopg2-binary pyspark
 
 # 2. 创建数据库
 createdb olist_dw
 
-# 3. 运行 ETL
+# 3. 运行 v1 ETL（pandas → PostgreSQL）
 python3 etl.py
 
-# 4. 运行分析查询
+# 4. 运行 v2 ETL（PySpark → Parquet）
+python3 spark_etl.py
+
+# 5. 运行 SQL 分析查询
 psql olist_dw -f queries.sql | cat
 ```
 
